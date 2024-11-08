@@ -6,8 +6,8 @@ POSTGRES_PASSWORD=$(openssl rand -base64 12)  # Generate a random 12-character p
 POSTGRES_DB="mydatabase"
 SECRET_KEY="my-secret" # for the demo app
 NEXT_PUBLIC_SAFE_KEY="safe-key" # for the demo app
-DOMAIN_NAME="server1.local" # replace with your own
-EMAIL="test@example.com" # replace with your own
+DOMAIN_NAME="nextselfhost.dev" # replace with your own
+EMAIL="your-email@example.com" # replace with your own
 
 # Script Vars
 REPO_URL="https://github.com/leerob/next-self-host.git"
@@ -98,26 +98,38 @@ sudo rm -f /etc/nginx/sites-enabled/myapp
 sudo systemctl stop nginx
 
 # Obtain SSL certificate using Certbot standalone mode
-#sudo apt install certbot -y
-#sudo certbot certonly --standalone -d $DOMAIN_NAME --non-interactive --agree-tos -m $EMAIL
+sudo apt install certbot -y
+sudo certbot certonly --standalone -d $DOMAIN_NAME --non-interactive --agree-tos -m $EMAIL
 
 # Ensure SSL files exist or generate them
-#if [ ! -f /etc/letsencrypt/options-ssl-nginx.conf ]; then
-#  sudo wget https://raw.githubusercontent.com/certbot/certbot/main/certbot-nginx/certbot_nginx/_internal/tls_configs/options-ssl-nginx.conf -P /etc/letsencrypt/
-#fi
+if [ ! -f /etc/letsencrypt/options-ssl-nginx.conf ]; then
+  sudo wget https://raw.githubusercontent.com/certbot/certbot/main/certbot-nginx/certbot_nginx/_internal/tls_configs/options-ssl-nginx.conf -P /etc/letsencrypt/
+fi
 
-#if [ ! -f /etc/letsencrypt/ssl-dhparams.pem ]; then
-#  sudo openssl dhparam -out /etc/letsencrypt/ssl-dhparams.pem 2048
-#fi
+if [ ! -f /etc/letsencrypt/ssl-dhparams.pem ]; then
+  sudo openssl dhparam -out /etc/letsencrypt/ssl-dhparams.pem 2048
+fi
 
 # Create Nginx config with reverse proxy, SSL support, rate limiting, and streaming support
-sudo mkdir -p /etc/nginx/sites-available
-cat > /tmp/myapp <<EOL
+sudo cat > /etc/nginx/sites-available/myapp <<EOL
 limit_req_zone \$binary_remote_addr zone=mylimit:10m rate=10r/s;
 
 server {
     listen 80;
     server_name $DOMAIN_NAME;
+
+    # Redirect all HTTP requests to HTTPS
+    return 301 https://\$host\$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name $DOMAIN_NAME;
+
+    ssl_certificate /etc/letsencrypt/live/$DOMAIN_NAME/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/$DOMAIN_NAME/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
     # Enable rate limiting
     limit_req zone=mylimit burst=20 nodelay;
@@ -137,9 +149,6 @@ server {
 }
 EOL
 
-sudo mv /tmp/myapp /etc/nginx/sites-available
-rm /tmp/myapp
-
 # Create symbolic link if it doesn't already exist
 sudo ln -s /etc/nginx/sites-available/myapp /etc/nginx/sites-enabled/myapp
 
@@ -157,7 +166,7 @@ if ! sudo docker-compose ps | grep "Up"; then
 fi
 
 # Output final message
-echo "Deployment complete. Your Next.js app and PostgreSQL database are now running.
+echo "Deployment complete. Your Next.js app and PostgreSQL database are now running. 
 Next.js is available at https://$DOMAIN_NAME, and the PostgreSQL database is accessible from the web service.
 
 The .env file has been created with the following values:
