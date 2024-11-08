@@ -1,6 +1,6 @@
 # Next.js Self Host
 
-以下をfolkして、httpsではなくhttpで動作するようにしたもの。
+以下をfolkして、httpsではなくhttpで動作するようにしたもの。オリジナルはSSL証明書の取得まで行うため、ドメインの取得が必須である。これだと簡単に試すことができないので、SSLを用いないように修正した。
 
 - https://github.com/leerob/next-self-host
 
