@@ -29,5 +29,5 @@ vim deploy.sh
 
 以下へアクセスする。
 
-- http://<hostname>/
+- `http://<DOMAIN_NAME>/`
 
